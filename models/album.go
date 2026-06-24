@@ -1,7 +1,7 @@
 package models
 
 type Album struct {
-	ID     string  `json:"id"`
+	ID     string  `json:"id" gorm:"primaryKey"`
 	Title  string  `json:"title" binding:"required"`
 	Artist string  `json:"artist" binding:"required"`
 	Price  float64 `json:"price" binding:"required,gt=0"`

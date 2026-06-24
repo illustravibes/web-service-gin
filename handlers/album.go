@@ -8,19 +8,20 @@ import (
 )
 
 func GetAlbum(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, models.Albums)
+	var albums []models.Album
+	models.DB.Find(&albums)
+	c.IndentedJSON(http.StatusOK, albums)
 }
 
 func GetAlbumByID(c *gin.Context) {
+	var album models.Album
 	id := c.Param("id")
 
-	for _, a := range models.Albums {
-		if a.ID == id {
-			c.IndentedJSON(http.StatusOK, a)
-			return
-		}
+	if err := models.DB.First(&album, "id = ?", id).Error; err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not found."})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not Found."})
+	c.IndentedJSON(http.StatusOK, album)
 }
 
 func PostAlbums(c *gin.Context) {
@@ -31,39 +32,44 @@ func PostAlbums(c *gin.Context) {
 		return
 	}
 
-	models.Albums = append(models.Albums, newAlbum)
+	if err := models.DB.Create(&newAlbum).Error; err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
 func UpdateAlbum(c *gin.Context) {
 	id := c.Param("id")
-	var updatedAlbum models.Album
+	var album models.Album
 
-	if err := c.BindJSON(&updatedAlbum); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error})
+	if err := models.DB.First(&album, "id = ?", id).Error; err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not found."})
 		return
 	}
 
-	for i, a := range models.Albums {
-		if a.ID == id {
-			updatedAlbum.ID = id
-			models.Albums[i] = updatedAlbum
-			c.IndentedJSON(http.StatusOK, updatedAlbum)
-			return
-		}
+	var input models.Album
+	if err := c.BindJSON(&input); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not Found."})
+
+	models.DB.Model(&album).Updates(input)
+
+	c.IndentedJSON(http.StatusOK, album)
 }
 
 func DeleteAlbum(c *gin.Context) {
 	id := c.Param("id")
+	var album models.Album
 
-	for i, a := range models.Albums {
-		if a.ID == id {
-			models.Albums = append(models.Albums[:i], models.Albums[i+1:]...)
-			c.IndentedJSON(http.StatusOK, gin.H{"message": "Album Deleted Successfully."})
-			return
-		}
+	if err := models.DB.First(&album, "id = ?", id).Error; err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not found."})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not Found."})
+
+	models.DB.Delete(&album)
+
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Album has been deleted successfully."})
 }
