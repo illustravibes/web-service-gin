@@ -7,7 +7,7 @@ import (
 )
 
 type album struct {
-	ID     string  `json:"id" binding:"required"`
+	ID     string  `json:"id"`
 	Title  string  `json:"title" binding:"required"`
 	Artist string  `json:"artist" binding:"required"`
 	Price  float64 `json:"price" binding:"required,gt=0"`
@@ -28,6 +28,7 @@ func main() {
 	router.GET("/albums", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
 	router.POST("/albums", postAlbums)
+	router.PUT("/albums/:id", updateAlbum)
 
 	router.Run("localhost:8080")
 }
@@ -53,4 +54,25 @@ func getAlbumByID(c *gin.Context) {
 		}
 	}
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found."})
+}
+
+func updateAlbum(c *gin.Context) {
+	id := c.Param("id")
+	var updatedAlbum album
+
+	if err := c.BindJSON(&updatedAlbum); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	for i, a := range albums {
+		if a.ID == id {
+			updatedAlbum.ID = id
+			albums[i] = updatedAlbum
+
+			c.IndentedJSON(http.StatusOK, updatedAlbum)
+			return
+		}
+	}
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
 }
